@@ -68,18 +68,19 @@ function App() {
   };
 
   async function publicMint() {
-    // if(메인넷 Networtk){
-    //   console.log('메인넷');
-    // } else if( 테스트넷 ){
-    //   console.log('테스트넷');
-    // } else {
-    //   alert('Error: 네트워크가 연결되지 않았습니다.');
-    //   return;
-    // }
-    // if (!account) {
-    //   alert("Error: 지갑을 연결해주세요");
-    //   return;
-    // }
+    if (chainId === 1) {
+      console.log("메인넷");
+    } else if (chainId === 5) {
+      console.log("Goerli");
+    } else {
+      alert("Error: 네트워크가 연결되지 않았습니다.");
+      return;
+    }
+    if (!account) {
+      alert("Error: 지갑을 연결해주세요");
+      return;
+    }
+
     let web3 = new Web3(window.ethereum);
     let contract = await new web3.eth.Contract(ABI, ADDRESS);
     console.log(contract);
@@ -154,7 +155,7 @@ function App() {
             <br />
             <br />
             <p className="mintPrice" style={{ color: "#FFFFFF" }}>
-              MINT PRICE : ETH
+              MINT PRICE :ETH
             </p>
           </div>
         </form>
