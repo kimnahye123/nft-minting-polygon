@@ -1,26 +1,29 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import "./App.css";
+import chainIds from "./chainIds.js";
+import { ABI, ADDRESS } from "./config.js";
 import Button from "react-bootstrap/Button";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { ethers } from "ethers";
 import BigNumber from "bignumber.js";
 import Web3 from "web3";
-import { ethers } from "ethers";
 
 function App() {
   const [provider, setProvider] = useState(undefined);
   const [signer, setSigner] = useState(undefined);
+  const [amount, setAmount] = useState(0);
   const [account, setAccount] = useState(undefined);
   const [balance, setBalance] = useState(undefined);
   const [chainId, setChainId] = useState(undefined);
 
+  //수량 입력받기. 최대 3개
   function onChange(e) {
+    setAmount(e.target.value);
     console.log(e.target.value);
   }
 
-  // useEffect(() => {
-  //   connectMetaMask();
-  // }, []);
-
+  //메타마스크 연결.
+  //윈도우에 메마 없으면 install 요청
   const connectMetaMask = async () => {
     try {
       if (typeof window.ethereum !== "undefined") {
@@ -35,30 +38,67 @@ function App() {
     }
   };
 
+  //web3에서 제공하는 provider 쓸 수 있게 provider에 넣어두기
   const getProvider = async () => {
     const provider = await new ethers.providers.Web3Provider(window.ethereum);
     setProvider(provider);
     return provider;
   };
 
-  const getSigner = async () => {
+  //provider로 sign 요청 할 수 있음
+  //sign 요청기능
+  const getSigner = async (provider) => {
     await provider.send("eth_requestAccounts", []);
     const signer = provider.getSigner();
     setSigner(signer);
     return signer;
   };
 
+  //wallet 연결 후 데이터 promise 로 가져오기
   const getWalletData = async (signer) => {
     const result = await Promise.all([
       signer.getAddress(),
       signer.getBalance(),
       signer.getChainId(),
     ]);
-    console.log(result);
+    console.log(result[1]);
     setAccount(result[0]);
-    setBalance(BigNumber(result[1]));
+    setBalance(Number(ethers.utils.formatEther(result[1])));
     setChainId(result[2]);
   };
+
+  async function publicMint() {
+    // if(메인넷 Networtk){
+    //   console.log('메인넷');
+    // } else if( 테스트넷 ){
+    //   console.log('테스트넷');
+    // } else {
+    //   alert('Error: 네트워크가 연결되지 않았습니다.');
+    //   return;
+    // }
+    // if (!account) {
+    //   alert("Error: 지갑을 연결해주세요");
+    //   return;
+    // }
+    let web3 = new Web3(window.ethereum);
+    let contract = await new web3.eth.Contract(ABI, ADDRESS);
+    console.log(contract);
+    let mintRate = Number(await contract.methods.cost().call());
+    let totalAmount = BigNumber(amount * mintRate);
+    try {
+      const result = contract.methods.mint(account, amount).send({
+        from: account,
+        value: String(totalAmount),
+      });
+      if (result != null) {
+        console.log(result);
+        alert("민팅에 성공하였습니다");
+      }
+    } catch (error) {
+      console.log(error);
+      alert("민팅에 실패하였습니다.");
+    }
+  }
   return (
     <div className="App">
       <div className="container">
@@ -90,8 +130,10 @@ function App() {
             >
               Connect MetaMask
             </Button>
+            <br />
             <p>YOUR ADDRESS :{account} </p>
-            <p>YOUR BALANCE :{balance} </p>
+            <p>YOUR BALANCE :{balance} ETH </p>
+            <p>NETWORK : </p>
           </div>
           <div>
             <h2 style={{ color: "#FFFFFF" }}>MINT</h2>
@@ -106,7 +148,7 @@ function App() {
                 onChange={onChange}
               />
             </p>
-            <Button variant="secondary" size="lg" active>
+            <Button variant="secondary" size="lg" active onClick={publicMint}>
               Mint/Buy
             </Button>{" "}
             <br />
