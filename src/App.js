@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./App.css";
 import chainIds from "./chainIds.js";
 import { ABI, ADDRESS } from "./config.js";
@@ -11,10 +11,45 @@ import Web3 from "web3";
 function App() {
   const [provider, setProvider] = useState(undefined);
   const [signer, setSigner] = useState(undefined);
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState(0); //amount >0 amount<= limitPerBlock
   const [account, setAccount] = useState(undefined);
   const [balance, setBalance] = useState(undefined);
   const [chainId, setChainId] = useState(undefined);
+  const [nowblock, setNowblock] = useState(undefined);
+  const [startBlock, setstartBlock] = useState(undefined);
+  const [totalmint, setTotalmint] = useState(undefined);
+
+  useEffect(() => {
+    try {
+      componentMount();
+      getMintBlock();
+    } catch (error) {
+      console.log(error);
+    }
+  }, []); //useEffect 다시 확인
+
+  const getBlockNumber = async () => {
+    let web3 = new Web3(window.ethereum);
+    const blockNumber = await web3.eth.getBlockNumber();
+    setNowblock(blockNumber);
+  };
+
+  const getMintBlock = async () => {
+    let web3 = new Web3(window.ethereum);
+    let contract = await new web3.eth.Contract(ABI, ADDRESS);
+    await contract.methods
+      .getStartMintBlock()
+      .call()
+      .then((result) => {
+        setstartBlock(result);
+      });
+  };
+
+  function componentMount() {
+    setInterval(() => {
+      getBlockNumber();
+    }, 15000);
+  }
 
   //수량 입력받기. 최대 3개
   function onChange(e) {
@@ -85,12 +120,23 @@ function App() {
     let contract = await new web3.eth.Contract(ABI, ADDRESS);
     console.log(contract);
     let mintRate = Number(await contract.methods.cost().call());
+    let total = await contract.methods.totalSupply().call();
+    setTotalmint(total);
     let totalAmount = BigNumber(amount * mintRate);
+    if (amount <= 0 || amount > 3) {
+      alert("3개까지만 욕심쟁이야");
+      return;
+    }
+    if (nowblock <= startBlock) {
+      alert("시간이 안됐다");
+      return;
+    }
     try {
       const result = contract.methods.mint(account, amount).send({
         from: account,
         value: String(totalAmount),
       });
+
       if (result != null) {
         console.log(result);
         alert("민팅에 성공하였습니다");
@@ -109,10 +155,10 @@ function App() {
         >
           <h2 style={{ color: "#FFFFFF" }}>MINTING</h2>
           <p className="blockNumber" style={{ color: "#FFFFFF" }}>
-            BLOCK NUMBER:
+            BLOCK NUMBER: {nowblock}
           </p>
           <p className="mintStartBlockNumber" style={{ color: "#FFFFFF" }}>
-            MIINT START BLOCKNUMBER: #
+            MIINT START BLOCKNUMBER: # {startBlock}
           </p>
           <p className="mintLimitPerBlock" style={{ color: "#FFFFFF" }}>
             MINT LIMIT PER BLOCK:
@@ -145,7 +191,7 @@ function App() {
                 type="number"
                 name="amount"
                 min="1"
-                max="3"
+                max="4"
                 onChange={onChange}
               />
             </p>
@@ -155,6 +201,7 @@ function App() {
             <br />
             <br />
             <p className="mintPrice" style={{ color: "#FFFFFF" }}>
+              {totalmint}/1000 <br />
               MINT PRICE :ETH
             </p>
           </div>
