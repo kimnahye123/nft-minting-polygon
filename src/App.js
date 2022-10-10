@@ -18,15 +18,24 @@ function App() {
   const [nowblock, setNowblock] = useState(undefined);
   const [startBlock, setstartBlock] = useState(undefined);
   const [totalmint, setTotalmint] = useState(undefined);
+  const [price, setPrice] = useState(0);
 
   useEffect(() => {
     try {
       componentMount();
       getMintBlock();
+      getTotal();
     } catch (error) {
       console.log(error);
     }
   }, []); //useEffect 다시 확인
+
+  const getTotal = async () => {
+    let web3 = new Web3(window.ethereum);
+    let contract = await new web3.eth.Contract(ABI, ADDRESS);
+    let total = await contract.methods.totalSupply().call();
+    setTotalmint(total);
+  };
 
   const getBlockNumber = async () => {
     let web3 = new Web3(window.ethereum);
@@ -103,10 +112,10 @@ function App() {
   };
 
   async function publicMint() {
-    if (chainId === 1) {
+    if (chainId === 137) {
       console.log("메인넷");
-    } else if (chainId === 5) {
-      console.log("Goerli");
+    } else if (chainId === 80001) {
+      console.log("Mumbai");
     } else {
       alert("Error: 네트워크가 연결되지 않았습니다.");
       return;
@@ -120,8 +129,6 @@ function App() {
     let contract = await new web3.eth.Contract(ABI, ADDRESS);
     console.log(contract);
     let mintRate = Number(await contract.methods.cost().call());
-    let total = await contract.methods.totalSupply().call();
-    setTotalmint(total);
     let totalAmount = BigNumber(amount * mintRate);
     if (amount <= 0 || amount > 3) {
       alert("3개까지만 욕심쟁이야");
@@ -179,7 +186,7 @@ function App() {
             </Button>
             <br />
             <p>YOUR ADDRESS :{account} </p>
-            <p>YOUR BALANCE :{balance} ETH </p>
+            <p>YOUR BALANCE :{balance} MATIC </p>
             <p>NETWORK : </p>
           </div>
           <div>
@@ -202,7 +209,7 @@ function App() {
             <br />
             <p className="mintPrice" style={{ color: "#FFFFFF" }}>
               {totalmint}/1000 <br />
-              MINT PRICE :ETH
+              MINT PRICE : 0.0001 MATIC
             </p>
           </div>
         </form>
